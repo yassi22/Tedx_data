@@ -1,0 +1,37 @@
+stages:
+  - build
+  - test
+
+build_docker_image:
+  stage: build
+  image: docker:26.1.4-cli
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_IMAGE_NAME: "s1144425/bookworm:latest"
+  before_script:
+    - docker login -u "$DOCKER_HUB_USERNAME" -p "$DOCKER_HUB_PASSWORD"
+  script:
+    - cat $ENVIROMENT_FILE > .env
+    - cat .env
+    - docker build 
+      --build-arg DB_NAME=${DB_NAME}
+      --build-arg DB_USER=${DB_USER}
+      --build-arg DB_PASSWORD=${DB_PASSWORD}
+      --build-arg DB_HOST=${DB_HOST}
+      --build-arg DB_PORT=${DB_PORT}
+      --build-arg YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      --build-arg SERVER_IP=${SERVER_IP}
+      --build-arg SERVER_USER=${SERVER_USER}
+      --build-arg SERVER_PASSWORD=${SERVER_PASSWORD}
+      --pull -t "$DOCKER_IMAGE_NAME" .
+    - docker push "$DOCKER_IMAGE_NAME"
+
+python_test:
+  stage: test
+  image: python:3.12
+  before_script:
+    - pip install python-dotenv
+  script:
+    - python -c "from dotenv import load_dotenv; import os; load_dotenv(); print('Environment variables loaded successfully')"
